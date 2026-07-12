@@ -267,7 +267,8 @@ def lookup_thai_word(word: str) -> dict:
         "part_of_speech": part_of_speech,
         "thai": <original word>,
         "english": <english translation or None>,
-        "phonetic": <phonetic transliteration or None>
+        "phonetic": <phonetic transliteration or None>,
+        "part_of_speech": <noun, verb, etc>
     }
     """
 
@@ -294,6 +295,8 @@ def lookup_thai_word(word: str) -> dict:
 
     text = soup.get_text(" ", strip=True)
 
+    # Part of speech
+    m = re.search(r'
     #
     # Look for pronunciation
     #

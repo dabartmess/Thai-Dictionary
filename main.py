@@ -17,6 +17,7 @@ Usage:
 
 import csv
 import importlib.util
+import importlib.util
 import os
 import re
 import sys
@@ -29,6 +30,7 @@ from bs4 import BeautifulSoup
 from getthaidictionary import fetchthai_words
 from parse_dict_entry import parse_thai_entry
 from variables import THAI_VOWELS, THAI_CONSONANTS, TONE_MARKERS
+from wordquery import query_longdo
 
 # Longdo Dictionary Official API (HTML format)
 LONGDO_MOBILE_URL = "https://dict.longdo.com/mobile.php"
@@ -46,7 +48,7 @@ def save_to_csv(results, filename='thai_dictionary.csv'):
         writer = csv.writer(f)
 
         # Write header
-        writer.writerow(['English Word', 'Thai Word', 'Phonetic Pronunciation', 'Source'])
+        writer.writerow(['English Word', 'Thai Word', 'Part of Speech', 'Phonetic Pronunciation', 'Part of Speech'])
 
         # Sort by English word (alphabetical order)
         sorted_results = sorted(results, key=lambda x: x['english'].lower())
@@ -55,9 +57,9 @@ def save_to_csv(results, filename='thai_dictionary.csv'):
         for result in sorted_results:
             writer.writerow([
                 result['english'],
-                result['thai'] or '',
-                result['phonetic'] or '',
-                result['source']
+                result['thai'],
+                result['phonetic'],
+                result["part_of_speech"]
             ])
 
     print(f"Saved {len(results)} entries to {filename}")
@@ -137,8 +139,7 @@ def get_longdo_translation(word):
 
             # if len(phonetic_parts) >= 1:
             # phonetic_thai = phonetic_parts[0]
-            if len(phonetic_parts) >= 3:
-                phonetic_ipa = phonetic_parts[-1]
+            phonetic_ipa = phonetic_parts[-1]
 
         # Extract Thai translations from result entries
         thai_translations = []
@@ -236,6 +237,7 @@ def get_longdo_entry(english1: str, word: str) -> dict:
 
             head = cols[0].get_text(" ", strip=True)
             body = cols[1].get_text(" ", strip=True)
+            print("BODY:", body)
 
             part_of_speech = None
 
@@ -262,6 +264,7 @@ def lookup_thai_word(word: str) -> dict:
 
     Returns:
     {
+        "part_of_speech": part_of_speech,
         "thai": <original word>,
         "english": <english translation or None>,
         "phonetic": <phonetic transliteration or None>,
@@ -270,6 +273,7 @@ def lookup_thai_word(word: str) -> dict:
     """
 
     result = {
+        "part_of_speech": None,
         "thai": word,
         "english": None,
         "phonetic": None
@@ -306,6 +310,10 @@ def lookup_thai_word(word: str) -> dict:
     if m:
         result["phonetic"] = m.group(1).strip()
 
+    m = re.search(r"\(([^)]+)\)", text)
+    if m:
+        part_of_speech = m.group(1)
+
     #
     # Look for first Thai-English definition
     #
@@ -318,6 +326,7 @@ def lookup_thai_word(word: str) -> dict:
     for pattern in patterns:
         m = re.search(pattern, text, re.DOTALL)
         if m:
+            print("m.group(1):", m.group(1))
             english = " ".join(m.group(1).split())
             if english:
                 result["english"] = english
@@ -419,7 +428,7 @@ def fetchthai(english):
                 # print("see_also:", syn)
                 result3 = lookup_thai_word(syn)
                 # result3 = get_longdo_entry(result2["english"], syn)
-                # print("Result3:", result3)
+                print("Result3:", result3)
 
                 if result3["english"] is None:
                     result3["english"] = english
@@ -436,9 +445,10 @@ def fetchthai(english):
             if "english" in result3 and result3["english"] is not None:
                 if result3["english"][0] != '[':
                     # print("FOUND!")
-                    fh.write(f"\"{result3['english']}\", \"{result3['thai']}\", \"{result3['phonetic']}\"\n")
+                    fh.write(
+                        f"\"{result3['english']}\", \"{result3['thai']}\", \"{result3['phonetic'], result3["part_of_speech"]}\"\n")
                     fh.flush()
-                    csv.append([result3["english"], result3["thai"], result3["phonetic"]])
+                    csv.append([result3["english"], result3["thai"], result3["phonetic"], result3["part_of_speech"]])
                 else:
                     print("NOT FOUND!")
                     # print(result3["english"])
@@ -485,8 +495,45 @@ if __name__ == '__main__':
     results_thai = []
     for f in wordlist:
         print("Thai:", f)
-        results_thai.append(lookup_thai_word(f))
-        print("Count:", len(results_thai))
+        # myresult = get_longdo_entry(english1="", word=f)
+        myresult = query_longdo(f)
+        if myresult:
+            print("MAIN.LONGDO", myresult)
+        else:
+            print("MAIN.SHORTDO (BAD)", f)
+        # myresult["phonetic"] = thai_to_phonetic(f)
+        # print("Adding:", myresult)
+        results_thai.append(myresult)
 
-    print("Thai:", results_thai)
+    print("Count:", len(results_thai))
+
+    # print(json.dumps(results_thai, indent=2, ensure_ascii=False), flush=True, sep='\n')
+    ct = 0
+
+# Press the green button in the gutter to run the script.
+if __name__ == '__main__':
+    english = fetchenglish()
+    print("English:", english)
+    wordlist = fetchthai_words()
+    # thai = fetchthai(english)
+    results_thai = []
+    for f in wordlist:
+        # print("Thai:", f)
+        # myresult = get_longdo_entry(english1="", word=f)
+        myresult = query_longdo(f)
+        if myresult:
+            print("MAIN.LONGDO", myresult)
+            print("Count:", len(results_thai))
+        else:
+            print("MAIN.SHORTDO (BAD)", f)
+            query_longdo(f)
+
+        # myresult["phonetic"] = thai_to_phonetic(f)
+        # print("Adding:", myresult)
+        results_thai.append(myresult)
+
+    print("Count:", len(results_thai))
+
+    # print(json.dumps(results_thai, indent=2, ensure_ascii=False), flush=True, sep='\n')
+    ct = 0
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/

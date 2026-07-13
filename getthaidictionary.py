@@ -23,7 +23,6 @@ def fetchthai_dictionary():
     # Define source file path and target directory
     home_dir = str(Path.home())
     source_file = home_dir + source_file_name
-    destinationfile = ("/opt/pycharmProjects/PythonProject/Thai/thai_dictionary_v1.0.csv")
 
     # 1. Ensure the destination directory exists
 
@@ -47,11 +46,11 @@ def fetchthai_words():
                 first = False
                 continue
             word, definition = line.split(',', 1)
-            print("WORD:", word)
+            # print("WORD:", word)
             thaiwords.append(word)
             ct += 1
 
-        print("Count:", ct)
+        print("Total Count of words:", ct)
     return thaiwords
 
 

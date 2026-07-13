@@ -38,11 +38,26 @@ def parse_thai_entry(english, text, phonetic):
         "see_also": [],
         "synonyms": [],
         "antonyms": [],
-        "english": english,
+        "english": [],
+        "part_of_speech": [],
     }
 
     print("parse_thai_entry: english:", english)
     result["english"] = english
+
+    patterns = [
+        r"Thai-English.*?\)\s*(.*?)\s*(?:Syn\.|Ant\.|Example|Hope Dictionary|NECTEC|$)",
+        r"\(ศัพท์บัญญัติ\)\s*(.*?)\s*(?:Syn\.|Ant\.|Example|$)",
+    ]
+
+    for pattern in patterns:
+        m = re.search(pattern, text, re.DOTALL)
+        if m:
+            print("m.group(1):", m.group(1))
+            english = " ".join(m.group(1).split())
+            if english:
+                result["english"] = english
+                break
 
     # Primary Thai word
     m = re.search(r'\)\s*([^,]+)', text)
@@ -70,6 +85,10 @@ def parse_thai_entry(english, text, phonetic):
         result["antonyms"] = [
             w.strip() for w in m.group(1).split(",") if w.strip()
         ]
+
+    m = re.search(r"\(([^)]+)\)", text)
+    if m:
+        part_of_speech = m.group(1)
 
     result["phonetic"] = phonetic
 
